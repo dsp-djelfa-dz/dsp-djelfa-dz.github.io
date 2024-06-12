@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مديرية الصحة و السكان</title>
+    <link href='https://fonts.googleapis.com/css?family=Almarai' rel='stylesheet'>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.3.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.3.1/firebase-firestore.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>مديرية الصحة و السكان لولاية الجلفة</h1>
+        <h2>تحديث المواقع الجغرافية للهايكل الصحية</h2>
+<script>
+function openInNewTab(url) {
+  window.open(url, '_blank');
+}
+</script>
+<a href="#" onclick="openInNewTab('help.html')"  class="blink" >فيديو توضيحي لطريقة العمل</a>
+
+
+        <br>
+        <br>
+        <div>
+            <h3>المؤسسة العمومية للصحة الجوارية</h3>
+            <select id="filterEntreprise">
+                <option value="الجلفة">الجلفة</option>
+                <option value="مسعد">مسعد</option>
+                <option value="حاسي بحبح">حاسي بحبح</option>
+                <option value="عين وسارة">عين وسارة</option>
+                <option value="قطارة">قطارة</option>
+            </select>
+            <button onclick="login()">دخول</button>
+        </div>
+        <div id="tableContainer" class="hidden">
+            <table>
+                <thead>
+                    <tr>
+                        <th>نوع الهيكل الصحي</th>
+                        <th>اسم الهيكل الصحي</th>
+                        <th>البلدية</th>
+                        <th>خط العرض Latitude</th>
+                        <th>خط الطول Longitude</th>
+                        <th>حفظ التعديلات</th>
+                    </tr>
+                </thead>
+                <tbody id="dataTable">
+                    <!-- Data will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script src="DoyyyrTsvrSYSpppTTH.js"></script>
+</body>
+</html>
