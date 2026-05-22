@@ -1,58 +1,1120 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مديرية الصحة و السكان</title>
-    <link href='https://fonts.googleapis.com/css?family=Almarai' rel='stylesheet'>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.3.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.3.1/firebase-firestore.js"></script>
+    <title>أداة إدخال السلع - مديرية الصحة</title>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js">
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            background: #f4faf8;
+            color: #263238;
+            padding: 20px;
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #005b54, #008b8b);
+            color: white;
+            padding: 20px 28px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .header .sub {
+            font-size: 12px;
+            opacity: 0.85;
+            margin-top: 4px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e0f2f1;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #005b54;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title .badge {
+            background: #005b54;
+            color: white;
+            font-size: 11px;
+            padding: 2px 10px;
+            border-radius: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: bold;
+            color: #546e7a;
+            margin-bottom: 4px;
+            margin-top: 12px;
+        }
+
+        label:first-child {
+            margin-top: 0;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid #cfd8dc;
+            border-radius: 10px;
+            font-size: 13px;
+            background: #f5f7fa;
+            transition: 0.2s;
+            font-family: inherit;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #005b54;
+            background: white;
+        }
+
+        .row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .row>* {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #005b54;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #004d40;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-success {
+            background: #2e7d32;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #1b5e20;
+        }
+
+        .btn-success:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1.5px solid #005b54;
+            color: #005b54;
+        }
+
+        .btn-outline:hover {
+            background: #e0f2f1;
+        }
+
+        .btn-danger {
+            background: #d32f2f;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b71c1c;
+        }
+
+        .file-zone {
+            border: 2px dashed #b2dfdb;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+            background: #f5f7fa;
+        }
+
+        .file-zone:hover,
+        .file-zone.dragover {
+            border-color: #005b54;
+            background: #e0f2f1;
+        }
+
+        .file-zone .icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .file-zone .hint {
+            font-size: 12px;
+            color: #90a4ae;
+        }
+
+        .file-info {
+            display: none;
+            background: #e8f5e9;
+            border: 1px solid #a5d6a7;
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-top: 12px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .file-info.visible {
+            display: flex;
+        }
+
+        .file-info .name {
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .file-info .rows-count {
+            font-size: 12px;
+            color: #546e7a;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+            margin-top: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        th {
+            background: #e0f2f1;
+            color: #005b54;
+            font-weight: bold;
+            padding: 10px 12px;
+            border: 1px solid #b2dfdb;
+            white-space: nowrap;
+            text-align: center;
+        }
+
+        td {
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            text-align: center;
+        }
+
+        tr:nth-child(even) {
+            background: #fafafa;
+        }
+
+        tr:hover {
+            background: #f0fdfa;
+        }
+
+        .summary {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        .summary-item {
+            background: #f5f7fa;
+            border-radius: 10px;
+            padding: 12px 16px;
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .summary-item .num {
+            font-size: 22px;
+            font-weight: bold;
+            color: #005b54;
+        }
+
+        .summary-item .lbl {
+            font-size: 11px;
+            color: #546e7a;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: bold;
+            color: white;
+            z-index: 999;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: 0.3s;
+            pointer-events: none;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .toast.success {
+            background: #2e7d32;
+        }
+
+        .toast.error {
+            background: #d32f2f;
+        }
+
+        .toast.info {
+            background: #005b54;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            margin-top: 12px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar.visible {
+            display: block;
+        }
+
+        .progress-bar .fill {
+            height: 100%;
+            background: #005b54;
+            border-radius: 3px;
+            width: 0%;
+            transition: 0.3s;
+        }
+
+        .step-indicator {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            background: #eceff1;
+            color: #90a4ae;
+        }
+
+        .step.active {
+            background: #005b54;
+            color: white;
+        }
+
+        .step.done {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .log-area {
+            background: #263238;
+            color: #e0f2f1;
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            margin-top: 12px;
+            line-height: 1.8;
+        }
+
+        .log-area.visible {
+            display: block;
+        }
+
+        .log-area .log-line {
+            opacity: 0;
+            animation: fadeIn 0.3s forwards;
+        }
+
+        .log-area .log-line.success {
+            color: #81c784;
+        }
+
+        .log-area .log-line.error {
+            color: #ef9a9a;
+        }
+
+        .log-area .log-line.info {
+            color: #90caf9;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        .column-mapping {
+            margin-top: 12px;
+            display: none;
+        }
+
+        .column-mapping.visible {
+            display: block;
+        }
+
+        .mapping-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 0;
+        }
+
+        .mapping-row .col-name {
+            font-weight: bold;
+            font-size: 12px;
+            min-width: 100px;
+        }
+
+        .mapping-row select {
+            width: auto;
+            min-width: 160px;
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 16px;
+            }
+            .row>* {
+                min-width: 100%;
+            }
+            .mapping-row {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
 </head>
 <body>
+
     <div class="container">
-        <h1>مديرية الصحة و السكان لولاية الجلفة</h1>
-        <h2>تحديث المواقع الجغرافية للهايكل الصحية</h2>
-<script>
-function openInNewTab(url) {
-  window.open(url, '_blank');
-}
-</script>
-<a href="#" onclick="openInNewTab('help.html')"  class="blink" >فيديو توضيحي لطريقة العمل</a>
 
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>📦 أداة إدخال السلع</h1>
+                <div class="sub">مديرية الصحة والسكان - إدارة المخزون</div>
+            </div>
+            <div style="font-size:13px; opacity:0.9;">رفع جماعي عبر Excel</div>
+        </div>
 
-        <br>
-        <br>
-        <div>
-            <h3>المؤسسة العمومية للصحة الجوارية</h3>
-            <select id="filterEntreprise">
-                <option value="الجلفة">الجلفة</option>
-                <option value="مسعد">مسعد</option>
-                <option value="حاسي بحبح">حاسي بحبح</option>
-                <option value="عين وسارة">عين وسارة</option>
-                <option value="قطارة">قطارة</option>
-            </select>
-            <button onclick="login()">دخول</button>
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+            <div class="step active" id="step1">1. رفع ملف Excel</div>
+            <div class="step" id="step2">2. معاينة ورفع</div>
         </div>
-        <div id="tableContainer" class="hidden">
-            <table>
-                <thead>
-                    <tr>
-                        <th>نوع الهيكل الصحي</th>
-                        <th>اسم الهيكل الصحي</th>
-                        <th>البلدية</th>
-                        <th>خط العرض Latitude</th>
-                        <th>خط الطول Longitude</th>
-                        <th>حفظ التعديلات</th>
-                    </tr>
-                </thead>
-                <tbody id="dataTable">
-                    <!-- Data will be inserted here -->
-                </tbody>
-            </table>
+
+        <!-- ========== STEP 1: Upload Excel ========== -->
+        <div class="card" id="upload-card">
+            <div class="card-title">
+                📄 رفع ملف Excel
+                <span class="badge">خطوة 1</span>
+            </div>
+
+            <div class="file-zone" id="fileZone" onclick="document.getElementById('fileInput').click()">
+                <div class="icon">📂</div>
+                <div style="font-weight:bold; font-size:14px;">اضغط هنا لاختيار ملف</div>
+                <div class="hint">يدعم .xlsx و .xls — يجب أن يحتوي على أعمدة: الاسم، الفئة، الكمية، الحد الأدنى</div>
+            </div>
+            <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" onchange="handleFile(event)" />
+
+            <div class="file-info" id="fileInfo">
+                <div>
+                    <div class="name" id="fileName"></div>
+                    <div class="rows-count" id="fileRows"></div>
+                </div>
+                <button class="btn btn-danger" onclick="clearFile()" style="padding:6px 14px; font-size:12px;">✕ إزالة</button>
+            </div>
+
+            <!-- Column Mapping -->
+            <div class="column-mapping" id="columnMapping">
+                <label style="margin-top:0;">تطابق الأعمدة (اختر الحقل المناسب لكل عمود):</label>
+                <div id="mappingContainer"></div>
+            </div>
+
+            <!-- Preview Table -->
+            <div id="previewSection" style="display:none;">
+                <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight:bold; font-size:13px; color:#005b54;">👁️ معاينة البيانات</span>
+                    <span style="font-size:11px; color:#546e7a;" id="previewCount"></span>
+                </div>
+                <div class="table-wrap">
+                    <table id="previewTable">
+                        <thead id="previewHead"></thead>
+                        <tbody id="previewBody"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
+
+        <!-- ========== STEP 2: Upload to Firebase ========== -->
+        <div class="card" id="upload-firebase-card">
+            <div class="card-title">
+                ☁️ رفع إلى Firebase
+                <span class="badge">خطوة 2</span>
+            </div>
+
+            <div class="summary" id="summaryArea">
+                <div class="summary-item">
+                    <div class="num" id="totalCount">0</div>
+                    <div class="lbl">إجمالي السلع</div>
+                </div>
+                <div class="summary-item">
+                    <div class="num" id="newCount">0</div>
+                    <div class="lbl">سيتم إضافتها</div>
+                </div>
+                <div class="summary-item">
+                    <div class="num" id="skipCount">0</div>
+                    <div class="lbl">سيتم تخطيها (بسبب أخطاء)</div>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;">
+                <button class="btn btn-success" id="uploadBtn" onclick="uploadToFirebase()" disabled>
+                    ☁️ رفع جميع السلع إلى Firebase
+                </button>
+                <button class="btn btn-outline" onclick="clearAll()">🔄 بداية جديدة</button>
+            </div>
+
+            <div class="progress-bar" id="progressBar">
+                <div class="fill" id="progressFill"></div>
+            </div>
+            <div style="font-size:12px; color:#546e7a; margin-top:6px; text-align:center;" id="progressText"></div>
+
+            <div class="log-area" id="logArea"></div>
+        </div>
+
+        <!-- Toast -->
+        <div class="toast" id="toast"></div>
+
+        <!-- Hidden: category list -->
+        <textarea id="categoryList" style="display:none;">الأدوات المكتبية,الوسائل والتجهيزات,العتاد الإداري,اللوازم المختلفة</textarea>
+
     </div>
-    <script src="DoyyyrTsvrSYSpppTTH.js"></script>
+
+    <script>
+        // ===================== FIREBASE CONFIG =====================
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyBgUrMym73hLIH67d-tnYwuBOp9XDI39cQ",
+            authDomain: "drh-dsp.firebaseapp.com",
+            projectId: "drh-dsp",
+            storageBucket: "drh-dsp.firebasestorage.app",
+            messagingSenderId: "402057618446",
+            appId: "1:402057618446:web:2f330b0deadc18dcfb085f",
+            measurementId: "G-K8FWKB6HEQ"
+        };
+
+        // Auto-connect on load
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => connectFirebase(), 300);
+        });
+
+        // ===================== STATE =====================
+        let firebaseApp = null;
+        let db = null;
+        let parsedData = [];
+        let columnMap = {};
+        let isUploading = false;
+
+        const CATEGORIES = [
+            'الأدوات المكتبية',
+            'الوسائل والتجهيزات',
+            'العتاد الإداري',
+            'اللوازم المختلفة'
+        ];
+
+        const EXPECTED_FIELDS = [
+            { id: 'name', label: 'اسم السلعة', required: true },
+            { id: 'category', label: 'الفئة', required: true },
+            { id: 'quantity', label: 'الكمية', required: true },
+            { id: 'minStock', label: 'الحد الأدنى' },
+            { id: 'insertDate', label: 'تاريخ الإدخال' },
+        ];
+
+        // ===================== TOAST =====================
+        function showToast(msg, type = 'info') {
+            const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.className = 'toast ' + type + ' show';
+            clearTimeout(el._timer);
+            el._timer = setTimeout(() => el.classList.remove('show'), 4000);
+        }
+
+        // ===================== STEP NAV =====================
+        function setStep(n) {
+            for (let i = 1; i <= 2; i++) {
+                const el = document.getElementById('step' + i);
+                el.className = 'step';
+                if (i < n) el.classList.add('done');
+                if (i === n) el.classList.add('active');
+            }
+        }
+
+        // ===================== FIREBASE =====================
+        function connectFirebase() {
+            try {
+                if (firebase.apps.length) {
+                    firebase.apps.forEach(app => app.delete());
+                }
+                firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+                db = firebase.firestore(firebaseApp);
+
+                // Test connection
+                db.collection('_test_')
+                    .doc('_ping_')
+                    .set({ timestamp: firebase.firestore.FieldValue.serverTimestamp() })
+                    .then(() => {
+                        setStep(1);
+                        console.log('✅ Firebase connected');
+                    })
+                    .catch(err => {
+                        console.error('❌ Firebase connection failed:', err.message);
+                        db = null;
+                        firebaseApp = null;
+                    });
+            } catch (err) {
+                console.error('❌ Firebase error:', err.message);
+            }
+        }
+
+        // ===================== FILE HANDLING =====================
+        const fileZone = document.getElementById('fileZone');
+
+        fileZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileZone.classList.add('dragover');
+        });
+
+        fileZone.addEventListener('dragleave', () => {
+            fileZone.classList.remove('dragover');
+        });
+
+        fileZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length) processFile(files[0]);
+        });
+
+        function handleFile(event) {
+            const file = event.target.files[0];
+            if (file) processFile(file);
+        }
+
+        function processFile(file) {
+            const validTypes = [
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-excel',
+                'application/vnd.ms-excel.sheet.macroEnabled.12',
+            ];
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (!['xlsx', 'xls'].includes(ext)) {
+                showToast('❌ الرجاء اختيار ملف Excel فقط (.xlsx أو .xls)', 'error');
+                return;
+            }
+
+            document.getElementById('fileName').textContent = file.name;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', codepage: 65001 });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+
+                    if (!json.length) {
+                        showToast('❌ الملف فارغ أو لا يحتوي على بيانات', 'error');
+                        return;
+                    }
+
+                    parsedData = json;
+                    document.getElementById('fileRows').textContent = json.length + ' صف';
+                    document.getElementById('fileInfo').classList.add('visible');
+
+                    // Detect columns and set up mapping
+                    detectColumns(json);
+                    renderMapping();
+                    renderPreview();
+
+                    document.getElementById('previewSection').style.display = 'block';
+                    document.getElementById('uploadBtn').disabled = true;
+                    setStep(3);
+                    showToast('✅ تم قراءة ' + json.length + ' سطر من الملف', 'success');
+                } catch (err) {
+                    showToast('❌ فشل في قراءة الملف: ' + err.message, 'error');
+                    console.error(err);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function clearFile() {
+            document.getElementById('fileInput').value = '';
+            parsedData = [];
+            columnMap = {};
+            document.getElementById('fileInfo').classList.remove('visible');
+            document.getElementById('previewSection').style.display = 'none';
+            document.getElementById('columnMapping').classList.remove('visible');
+            document.getElementById('previewBody').innerHTML = '';
+            document.getElementById('previewHead').innerHTML = '';
+            document.getElementById('uploadBtn').disabled = true;
+            document.getElementById('newCount').textContent = '0';
+            document.getElementById('skipCount').textContent = '0';
+            document.getElementById('totalCount').textContent = '0';
+        }
+
+        function clearAll() {
+            clearFile();
+            setStep(1);
+            document.getElementById('logArea').classList.remove('visible');
+            document.getElementById('logArea').innerHTML = '';
+            document.getElementById('progressBar').classList.remove('visible');
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressText').textContent = '';
+        }
+
+        // ===================== COLUMN DETECTION & MAPPING =====================
+        function detectColumns(data) {
+            const keys = Object.keys(data[0]);
+
+            // Auto-detect mapping
+            const autoMap = {};
+            const patterns = {
+                name: ['اسم', 'name', 'الاسم', 'item', 'سلعة', 'السلعة', 'الصنف', 'مادة'],
+                category: ['فئة', 'category', 'الفئة', 'تصنيف', 'نوع', 'النوع', 'قسم'],
+                quantity: ['كمية', 'quantity', 'الكمية', 'عدد', 'العدد', 'qty', 'count'],
+                minStock: ['حد', 'minimum', 'min', 'minstock', 'الحد', 'الادنى', 'الأدنى'],
+                insertDate: ['تاريخ', 'date', 'التاريخ', 'insert', 'إدخال', 'تسجيل'],
+            };
+
+            for (const key of keys) {
+                const lower = key.trim().toLowerCase().replace(/[\s\-_]/g, '');
+                for (const [field, aliases] of Object.entries(patterns)) {
+                    if (aliases.some(a => lower.includes(a))) {
+                        if (!autoMap[field]) autoMap[field] = key;
+                    }
+                }
+            }
+
+            // Fill missing
+            const usedKeys = new Set(Object.values(autoMap));
+            const availableKeys = keys.filter(k => !usedKeys.has(k));
+            let availIdx = 0;
+
+            for (const field of EXPECTED_FIELDS) {
+                if (!autoMap[field.id]) {
+                    if (availIdx < availableKeys.length) {
+                        autoMap[field.id] = availableKeys[availIdx++];
+                    }
+                }
+            }
+
+            columnMap = autoMap;
+        }
+
+        function renderMapping() {
+            const container = document.getElementById('mappingContainer');
+            container.innerHTML = '';
+            const keys = Object.keys(parsedData[0]);
+
+            EXPECTED_FIELDS.forEach(field => {
+                const div = document.createElement('div');
+                div.className = 'mapping-row';
+
+                const label = document.createElement('span');
+                label.className = 'col-name';
+                label.textContent = field.label + (field.required ? ' *' : '');
+
+                const select = document.createElement('select');
+                select.dataset.field = field.id;
+
+                const noneOpt = document.createElement('option');
+                noneOpt.value = '';
+                noneOpt.textContent = '— تجاهل —';
+                select.appendChild(noneOpt);
+
+                keys.forEach(k => {
+                    const opt = document.createElement('option');
+                    opt.value = k;
+                    opt.textContent = k;
+                    if (columnMap[field.id] === k) opt.selected = true;
+                    select.appendChild(opt);
+                });
+
+                select.onchange = function() {
+                    columnMap[field.id] = this.value;
+                    renderPreview();
+                    updateUploadReady();
+                    validateMapping();
+                };
+
+                div.appendChild(label);
+                div.appendChild(select);
+                container.appendChild(div);
+            });
+
+            document.getElementById('columnMapping').classList.add('visible');
+            validateMapping();
+        }
+
+        function validateMapping() {
+            const missing = EXPECTED_FIELDS.filter(f => f.required && !columnMap[f.id]);
+            const status = document.getElementById('mappingStatus');
+            if (!status) {
+                const s = document.createElement('div');
+                s.id = 'mappingStatus';
+                s.style.cssText = 'font-size:12px; font-weight:bold; margin-top:8px;';
+                document.getElementById('mappingContainer').after(s);
+            }
+            const el = document.getElementById('mappingStatus');
+            if (missing.length) {
+                el.innerHTML = '⚠️ الحقول الإجبارية غير مرتبطة: ' + missing.map(f => f.label).join('، ');
+                el.style.color = '#d32f2f';
+            } else {
+                el.innerHTML = '✅ جميع الحقول الإجبارية مرتبطة';
+                el.style.color = '#2e7d32';
+            }
+        }
+
+        // ===================== PREVIEW =====================
+        function renderPreview() {
+            const head = document.getElementById('previewHead');
+            const body = document.getElementById('previewBody');
+
+            const fields = EXPECTED_FIELDS.filter(f => columnMap[f.id]);
+            const headers = fields.map(f => f.label);
+
+            // Header
+            head.innerHTML = '<tr><th>#</th>' + headers.map(h => '<th>' + h + '</th>').join('') + '</tr>';
+
+            // Body (max 50 rows preview)
+            const maxPreview = Math.min(parsedData.length, 50);
+            let rows = '';
+            for (let i = 0; i < maxPreview; i++) {
+                const row = parsedData[i];
+                rows += '<tr><td>' + (i + 1) + '</td>';
+                for (const field of fields) {
+                    const val = getFieldValue(row, field.id);
+                    rows += '<td>' + escapeHtml(String(val)) + '</td>';
+                }
+                rows += '</tr>';
+            }
+            body.innerHTML = rows;
+
+            document.getElementById('previewCount').textContent =
+                'عرض ' + maxPreview + ' من ' + parsedData.length + ' صف';
+            updateSummary();
+            updateUploadReady();
+        }
+
+        function getFieldValue(row, fieldId) {
+            const key = columnMap[fieldId];
+            if (!key) return '';
+
+            let val = row[key];
+            if (val === undefined || val === null) return '';
+            val = String(val).trim();
+
+            if (fieldId === 'quantity' || fieldId === 'minStock') {
+                const num = parseInt(val) || 0;
+                return num;
+            }
+
+            if (fieldId === 'category') {
+                // Auto-match category
+                const matched = matchCategory(val);
+                return matched || val;
+            }
+
+            if (fieldId === 'insertDate') {
+                // If excel serial date number
+                if (!isNaN(val) && val !== '') {
+                    const d = XLSX.SSF.parse_date_code(parseFloat(val));
+                    if (d) {
+                        const y = d.y,
+                            m = String(d.m).padStart(2, '0'),
+                            day = String(d.d).padStart(2, '0');
+                        return y + '-' + m + '-' + day;
+                    }
+                }
+                // If it's already a date string, try to normalize
+                if (val.includes('/') || val.includes('-')) {
+                    const d = new Date(val);
+                    if (!isNaN(d.getTime())) {
+                        return d.toISOString().split('T')[0];
+                    }
+                }
+                return val || new Date().toISOString().split('T')[0];
+            }
+
+            return val;
+        }
+
+        function matchCategory(input) {
+            const lower = input.trim().toLowerCase();
+            for (const cat of CATEGORIES) {
+                if (lower.includes(cat.replace(/[\s\-_]/g, '').toLowerCase()) ||
+                    cat.toLowerCase().includes(lower)) {
+                    return cat;
+                }
+            }
+            // Partial matching
+            if (lower.includes('مكتب') || lower.includes('قرطاس')) return 'الأدوات المكتبية';
+            if (lower.includes('تجهيز') || lower.includes('وسائل') || lower.includes('معدات'))
+                return 'الوسائل والتجهيزات';
+            if (lower.includes('عتاد') || lower.includes('إداري') || lower.includes('اداري'))
+                return 'العتاد الإداري';
+            if (lower.includes('لوزم') || lower.includes('مختلف') || lower.includes('أخرى'))
+                return 'اللوازم المختلفة';
+            return input;
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ===================== SUMMARY =====================
+        function updateSummary() {
+            let valid = 0,
+                invalid = 0;
+            for (const row of parsedData) {
+                const name = getFieldValue(row, 'name');
+                const qty = getFieldValue(row, 'quantity');
+                if (name && name !== '' && qty !== '' && !isNaN(parseInt(qty))) {
+                    valid++;
+                } else {
+                    invalid++;
+                }
+            }
+            document.getElementById('totalCount').textContent = parsedData.length;
+            document.getElementById('newCount').textContent = valid;
+            document.getElementById('skipCount').textContent = invalid;
+        }
+
+        function updateUploadReady() {
+            const hasRequired = EXPECTED_FIELDS.every(f =>
+                !f.required || columnMap[f.id]
+            );
+            const hasData = parsedData.length > 0;
+            const hasFirebase = db !== null;
+            const btn = document.getElementById('uploadBtn');
+            btn.disabled = !(hasRequired && hasData && hasFirebase);
+
+            if (!hasFirebase) btn.title = 'الرجاء الاتصال بـ Firebase أولاً';
+            else if (!hasData) btn.title = 'الرجاء رفع ملف Excel';
+            else if (!hasRequired) btn.title = 'الرجاء ربط جميع الحقول الإجبارية';
+            else btn.title = '';
+        }
+
+        // ===================== UPLOAD TO FIREBASE =====================
+        function log(msg, type = 'info') {
+            const area = document.getElementById('logArea');
+            area.classList.add('visible');
+            const line = document.createElement('div');
+            line.className = 'log-line ' + type;
+            line.textContent = '> ' + msg;
+            area.appendChild(line);
+            area.scrollTop = area.scrollHeight;
+        }
+
+        async function uploadToFirebase() {
+            if (isUploading) return;
+            if (!db) {
+                showToast('❌ الرجاء الاتصال بـ Firebase أولاً', 'error');
+                return;
+            }
+
+            const requiredMissing = EXPECTED_FIELDS.filter(f => f.required && !columnMap[f.id]);
+            if (requiredMissing.length) {
+                showToast('❌ الرجاء ربط جميع الحقول الإجبارية', 'error');
+                return;
+            }
+
+            isUploading = true;
+            const btn = document.getElementById('uploadBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ جاري الرفع...';
+
+            const progressBar = document.getElementById('progressBar');
+            progressBar.classList.add('visible');
+            const fill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const logArea = document.getElementById('logArea');
+            logArea.innerHTML = '';
+            logArea.classList.add('visible');
+
+            const items = [];
+            const errors = [];
+
+            // Prepare data
+            for (let i = 0; i < parsedData.length; i++) {
+                const row = parsedData[i];
+                const name = String(getFieldValue(row, 'name') || '').trim();
+                const category = String(getFieldValue(row, 'category') || CATEGORIES[0]).trim();
+                const quantity = parseInt(getFieldValue(row, 'quantity')) || 0;
+                const minStock = parseInt(getFieldValue(row, 'minStock')) || 0;
+                const insertDate = String(getFieldValue(row, 'insertDate') ||
+                    new Date().toISOString().split('T')[0]);
+
+                if (!name) {
+                    errors.push({ row: i + 1, reason: 'اسم السلعة فارغ' });
+                    continue;
+                }
+
+                // Validate category
+                const matchedCat = matchCategory(category);
+                const finalCategory = CATEGORIES.includes(matchedCat) ? matchedCat : CATEGORIES[0];
+
+                items.push({
+                    name: name,
+                    category: finalCategory,
+                    quantity: quantity,
+                    minStock: minStock,
+                    insertDate: insertDate,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                });
+            }
+
+            log('✅ تم تجهيز ' + items.length + ' سلعة للرفع', 'success');
+            if (errors.length) {
+                log('⚠️ تم تخطي ' + errors.length + ' صف بسبب أخطاء:', 'error');
+                errors.slice(0, 10).forEach(e => log('   صف ' + e.row + ': ' + e.reason, 'error'));
+                if (errors.length > 10) log('   ...و' + (errors.length - 10) + ' خطأ آخر', 'error');
+            }
+
+            if (!items.length) {
+                showToast('❌ لا توجد سلع صالحة للرفع', 'error');
+                isUploading = false;
+                btn.disabled = false;
+                btn.textContent = '☁️ رفع جميع السلع إلى Firebase';
+                return;
+            }
+
+            // Upload in batches
+            const BATCH_SIZE = 50;
+            let uploaded = 0;
+            let failed = 0;
+
+            for (let i = 0; i < items.length; i += BATCH_SIZE) {
+                const batch = db.batch();
+                const batchItems = items.slice(i, Math.min(i + BATCH_SIZE, items.length));
+
+                for (const item of batchItems) {
+                    const ref = db.collection('items').doc();
+                    batch.set(ref, item);
+                }
+
+                try {
+                    await batch.commit();
+                    uploaded += batchItems.length;
+                    const progress = Math.round(((i + batchItems.length) / items.length) * 100);
+                    fill.style.width = progress + '%';
+                    progressText.textContent = progress + '% — تم رفع ' + uploaded + ' من ' + items.length;
+                    log('✅ تم رفع ' + batchItems.length + ' سلعة (' + (i + batchItems.length) + '/' + items
+                        .length + ')', 'success');
+                } catch (err) {
+                    failed += batchItems.length;
+                    log('❌ فشل في رفع الدفعة: ' + err.message, 'error');
+                }
+            }
+
+            fill.style.width = '100%';
+            progressText.textContent = '✅ اكتمل!';
+
+            log('');
+            log('═══════════════════════════════════', 'info');
+            log('✅ تم رفع ' + uploaded + ' سلعة بنجاح', 'success');
+            if (failed > 0) log('❌ فشل رفع ' + failed + ' سلعة', 'error');
+            log('📁 المجموعة: items (Firestore)', 'info');
+            log('═══════════════════════════════════', 'info');
+
+            showToast('✅ تم رفع ' + uploaded + ' سلعة إلى Firebase بنجاح', 'success');
+
+            isUploading = false;
+            btn.disabled = false;
+            btn.textContent = '☁️ رفع جميع السلع إلى Firebase';
+        }
+
+        // ===================== INIT =====================
+        updateUploadReady();
+    </script>
+
 </body>
 </html>
