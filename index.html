@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> إدخال السلع - مديرية الصحة</title>
+    <title>أداة إدخال السلع - مديرية الصحة</title>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js">
     </script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js">
@@ -466,10 +466,13 @@
         <!-- Header -->
         <div class="header">
             <div>
-                <h1>📦  إدخال اللوازم المكتبية</h1>
-                <div class="sub">مديرية الصحة والسكان - مكتب الميزانية والمراقبة</div>
+                <h1>📦 أداة إدخال السلع</h1>
+                <div class="sub">مديرية الصحة والسكان - إدارة المخزون</div>
             </div>
-            <div style="font-size:13px; opacity:0.9;">رفع جماعي عبر Excel</div>
+            <div style="font-size:13px; opacity:0.9; display:flex; align-items:center; gap:6px;">
+                <span id="fbStatusDot" style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#f44336;"></span>
+                <span id="fbStatusText">جاري الاتصال...</span>
+            </div>
         </div>
 
         <!-- Step Indicator -->
@@ -632,22 +635,16 @@
                 }
                 firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
                 db = firebase.firestore(firebaseApp);
-
-                // Test connection
-                db.collection('_test_')
-                    .doc('_ping_')
-                    .set({ timestamp: firebase.firestore.FieldValue.serverTimestamp() })
-                    .then(() => {
-                        setStep(1);
-                        console.log('✅ Firebase connected');
-                    })
-                    .catch(err => {
-                        console.error('❌ Firebase connection failed:', err.message);
-                        db = null;
-                        firebaseApp = null;
-                    });
+                document.getElementById('fbStatusDot').style.background = '#4caf50';
+                document.getElementById('fbStatusText').textContent = 'متصل';
+                setStep(1);
+                updateUploadReady();
+                console.log('✅ Firebase connected');
             } catch (err) {
                 console.error('❌ Firebase error:', err.message);
+                document.getElementById('fbStatusDot').style.background = '#f44336';
+                document.getElementById('fbStatusText').textContent = 'خطأ في الاتصال';
+                updateUploadReady();
             }
         }
 
@@ -712,8 +709,7 @@
                     renderPreview();
 
                     document.getElementById('previewSection').style.display = 'block';
-                    document.getElementById('uploadBtn').disabled = true;
-                    setStep(3);
+                    setStep(2);
                     showToast('✅ تم قراءة ' + json.length + ' سطر من الملف', 'success');
                 } catch (err) {
                     showToast('❌ فشل في قراءة الملف: ' + err.message, 'error');
@@ -1020,10 +1016,39 @@
             logArea.innerHTML = '';
             logArea.classList.add('visible');
 
-            const items = [];
+            // Step 1: Delete ALL existing items from Firebase
+            log('🗑️ جاري حذف جميع السلع الموجودة في Firebase...', 'info');
+            let deleteIds = [];
+            try {
+                const snap = await db.collection('items').get();
+                snap.forEach(doc => deleteIds.push(doc.id));
+                log('✅ تم جلب ' + deleteIds.length + ' سلعة للحذف', 'success');
+            } catch (err) {
+                log('⚠️ فشل جلب السلع للحذف: ' + err.message, 'error');
+            }
+
+            // Delete in batches of 50
+            const DELETE_BATCH = 50;
+            for (let i = 0; i < deleteIds.length; i += DELETE_BATCH) {
+                const batch = db.batch();
+                const batchIds = deleteIds.slice(i, Math.min(i + DELETE_BATCH, deleteIds.length));
+                for (const id of batchIds) {
+                    batch.delete(db.collection('items').doc(id));
+                }
+                try {
+                    await batch.commit();
+                    log('✅ تم حذف ' + batchIds.length + ' سلعة (' + Math.min(i + DELETE_BATCH, deleteIds.length) + '/' + deleteIds.length + ')', 'success');
+                } catch (err) {
+                    log('❌ فشل حذف دفعة: ' + err.message, 'error');
+                }
+            }
+            if (deleteIds.length > 0) log('✅ تم حذف ' + deleteIds.length + ' سلعة بنجاح', 'success');
+            else log('ℹ️ لا توجد سلع قديمة للحذف', 'info');
+
+            // Step 2: Prepare new items from Excel
+            const newItems = [];
             const errors = [];
 
-            // Prepare data
             for (let i = 0; i < parsedData.length; i++) {
                 const row = parsedData[i];
                 const name = String(getFieldValue(row, 'name') || '').trim();
@@ -1038,11 +1063,10 @@
                     continue;
                 }
 
-                // Validate category
                 const matchedCat = matchCategory(category);
                 const finalCategory = CATEGORIES.includes(matchedCat) ? matchedCat : CATEGORIES[0];
 
-                items.push({
+                newItems.push({
                     name: name,
                     category: finalCategory,
                     quantity: quantity,
@@ -1052,14 +1076,14 @@
                 });
             }
 
-            log('✅ تم تجهيز ' + items.length + ' سلعة للرفع', 'success');
+            log('✅ تم تجهيز ' + newItems.length + ' سلعة للرفع', 'success');
             if (errors.length) {
                 log('⚠️ تم تخطي ' + errors.length + ' صف بسبب أخطاء:', 'error');
                 errors.slice(0, 10).forEach(e => log('   صف ' + e.row + ': ' + e.reason, 'error'));
                 if (errors.length > 10) log('   ...و' + (errors.length - 10) + ' خطأ آخر', 'error');
             }
 
-            if (!items.length) {
+            if (!newItems.length) {
                 showToast('❌ لا توجد سلع صالحة للرفع', 'error');
                 isUploading = false;
                 btn.disabled = false;
@@ -1067,28 +1091,25 @@
                 return;
             }
 
-            // Upload in batches
+            // Step 3: Upload new items in batches
             const BATCH_SIZE = 50;
-            let uploaded = 0;
+            let completed = 0;
             let failed = 0;
 
-            for (let i = 0; i < items.length; i += BATCH_SIZE) {
+            for (let i = 0; i < newItems.length; i += BATCH_SIZE) {
                 const batch = db.batch();
-                const batchItems = items.slice(i, Math.min(i + BATCH_SIZE, items.length));
-
+                const batchItems = newItems.slice(i, Math.min(i + BATCH_SIZE, newItems.length));
                 for (const item of batchItems) {
                     const ref = db.collection('items').doc();
                     batch.set(ref, item);
                 }
-
                 try {
                     await batch.commit();
-                    uploaded += batchItems.length;
-                    const progress = Math.round(((i + batchItems.length) / items.length) * 100);
+                    completed += batchItems.length;
+                    const progress = Math.round((completed / newItems.length) * 100);
                     fill.style.width = progress + '%';
-                    progressText.textContent = progress + '% — تم رفع ' + uploaded + ' من ' + items.length;
-                    log('✅ تم رفع ' + batchItems.length + ' سلعة (' + (i + batchItems.length) + '/' + items
-                        .length + ')', 'success');
+                    progressText.textContent = progress + '% — تم رفع ' + completed + ' من ' + newItems.length;
+                    log('✅ تم رفع ' + batchItems.length + ' سلعة (' + completed + '/' + newItems.length + ')', 'success');
                 } catch (err) {
                     failed += batchItems.length;
                     log('❌ فشل في رفع الدفعة: ' + err.message, 'error');
@@ -1100,12 +1121,12 @@
 
             log('');
             log('═══════════════════════════════════', 'info');
-            log('✅ تم رفع ' + uploaded + ' سلعة بنجاح', 'success');
-            if (failed > 0) log('❌ فشل رفع ' + failed + ' سلعة', 'error');
+            log('✅ تم حذف ' + (deleteIds ? deleteIds.length : 0) + ' سلعة قديمة ورفع ' + completed + ' سلعة جديدة', 'success');
+            if (failed > 0) log('❌ فشل ' + failed + ' عملية', 'error');
             log('📁 المجموعة: items (Firestore)', 'info');
             log('═══════════════════════════════════', 'info');
 
-            showToast('✅ تم رفع ' + uploaded + ' سلعة إلى Firebase بنجاح', 'success');
+            showToast('✅ تم تحديث المخزون: رفع ' + completed + ' سلعة إلى Firebase', 'success');
 
             isUploading = false;
             btn.disabled = false;
