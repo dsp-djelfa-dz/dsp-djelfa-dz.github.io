@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>أداة إدخال السلع - مديرية الصحة</title>
+    <title>أداة الإدارة - مديرية الصحة</title>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js">
     </script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js">
@@ -446,6 +446,43 @@
             min-width: 160px;
         }
 
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 20px;
+            background: #e0f2f1;
+            border-radius: 12px;
+            padding: 4px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            background: transparent;
+            color: #546e7a;
+            transition: 0.2s;
+            text-align: center;
+        }
+
+        .tab.active {
+            background: white;
+            color: #005b54;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        .tab:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .tab-content {
+            display: block;
+        }
+
         @media (max-width: 600px) {
             .header h1 {
                 font-size: 16px;
@@ -466,7 +503,7 @@
         <!-- Header -->
         <div class="header">
             <div>
-                <h1>📦 أداة إدخال السلع</h1>
+                <h1>📋 أداة الإدارة</h1>
                 <div class="sub">مديرية الصحة والسكان - إدارة المخزون</div>
             </div>
             <div style="font-size:13px; opacity:0.9; display:flex; align-items:center; gap:6px;">
@@ -475,8 +512,17 @@
             </div>
         </div>
 
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" data-tab="items" onclick="switchTab('items')">📦 السلع</button>
+            <button class="tab" data-tab="employees" onclick="switchTab('employees')">👤 الموظفين</button>
+        </div>
+
+        <!-- ========== ITEMS TAB ========== -->
+        <div id="tabItems" class="tab-content">
+
         <!-- Step Indicator -->
-        <div class="step-indicator">
+        <div class="step-indicator" id="stepIndicator">
             <div class="step active" id="step1">1. رفع ملف Excel</div>
             <div class="step" id="step2">2. معاينة ورفع</div>
         </div>
@@ -560,6 +606,98 @@
 
             <div class="log-area" id="logArea"></div>
         </div>
+        </div>
+        <!-- ============================== -->
+
+        <!-- ========== EMPLOYEES TAB ========== -->
+        <div id="tabEmployees" class="tab-content" style="display:none;">
+
+            <div class="step-indicator">
+                <div class="step active" id="empStep1">1. رفع ملف Excel</div>
+                <div class="step" id="empStep2">2. معاينة ورفع</div>
+            </div>
+
+            <!-- Upload Card -->
+            <div class="card" id="empUploadCard">
+                <div class="card-title">
+                    📄 رفع ملف الموظفين
+                    <span class="badge">خطوة 1</span>
+                </div>
+
+                <div class="file-zone" id="empFileZone" onclick="document.getElementById('empFileInput').click()">
+                    <div class="icon">📂</div>
+                    <div style="font-weight:bold; font-size:14px;">اضغط هنا لاختيار ملف</div>
+                    <div class="hint">يدعم .xlsx و .xls — يجب أن يحتوي على أعمدة: الاسم، القسم (اختياري)</div>
+                </div>
+                <input type="file" id="empFileInput" accept=".xlsx,.xls" style="display:none" onchange="handleEmpFile(event)" />
+
+                <div class="file-info" id="empFileInfo">
+                    <div>
+                        <div class="name" id="empFileName"></div>
+                        <div class="rows-count" id="empFileRows"></div>
+                    </div>
+                    <button class="btn btn-danger" onclick="clearEmpFile()" style="padding:6px 14px; font-size:12px;">✕ إزالة</button>
+                </div>
+
+                <!-- Column Mapping -->
+                <div class="column-mapping" id="empColumnMapping">
+                    <label style="margin-top:0;">تطابق الأعمدة (اختر الحقل المناسب لكل عمود):</label>
+                    <div id="empMappingContainer"></div>
+                </div>
+
+                <!-- Preview Table -->
+                <div id="empPreviewSection" style="display:none;">
+                    <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-weight:bold; font-size:13px; color:#005b54;">👁️ معاينة البيانات</span>
+                        <span style="font-size:11px; color:#546e7a;" id="empPreviewCount"></span>
+                    </div>
+                    <div class="table-wrap">
+                        <table id="empPreviewTable">
+                            <thead id="empPreviewHead"></thead>
+                            <tbody id="empPreviewBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload to Firebase Card -->
+            <div class="card" id="empUploadFirebaseCard">
+                <div class="card-title">
+                    ☁️ رفع إلى Firebase
+                    <span class="badge">خطوة 2</span>
+                </div>
+
+                <div class="summary" id="empSummaryArea">
+                    <div class="summary-item">
+                        <div class="num" id="empTotalCount">0</div>
+                        <div class="lbl">إجمالي الموظفين</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="num" id="empNewCount">0</div>
+                        <div class="lbl">سيتم إضافتهم</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="num" id="empSkipCount">0</div>
+                        <div class="lbl">سيتم تخطيهم (بسبب أخطاء)</div>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;">
+                    <button class="btn btn-success" id="empUploadBtn" onclick="uploadEmployeesToFirebase()" disabled>
+                        ☁️ رفع جميع الموظفين إلى Firebase
+                    </button>
+                    <button class="btn btn-outline" onclick="clearEmpAll()">🔄 بداية جديدة</button>
+                </div>
+
+                <div class="progress-bar" id="empProgressBar">
+                    <div class="fill" id="empProgressFill"></div>
+                </div>
+                <div style="font-size:12px; color:#546e7a; margin-top:6px; text-align:center;" id="empProgressText"></div>
+
+                <div class="log-area" id="empLogArea"></div>
+            </div>
+        </div>
+        <!-- ============================== -->
 
         <!-- Toast -->
         <div class="toast" id="toast"></div>
@@ -594,10 +732,12 @@
         let isUploading = false;
 
         const CATEGORIES = [
-            'الأدوات المكتبية',
-            'الوسائل والتجهيزات',
-            'العتاد الإداري',
-            'اللوازم المختلفة'
+            'الأدوات والأثاث',
+            'عتاد ولوازم الإعلام الآلي',
+            'اللوازم',
+            'التكاليف الملحقة',
+            'الألبسة',
+            'مواد التنظيف'
         ];
 
         const EXPECTED_FIELDS = [
@@ -607,6 +747,34 @@
             { id: 'minStock', label: 'الحد الأدنى' },
             { id: 'insertDate', label: 'تاريخ الإدخال' },
         ];
+
+        const EMPLOYEE_FIELDS = [
+            { id: 'name', label: 'اسم الموظف', required: true },
+            { id: 'department', label: 'القسم / المصلحة' },
+        ];
+
+        const DEPARTMENTS = [
+            'مصلحة الموارد البشرية',
+            'مصلحة التجهيز',
+            'مصلحة الوقاية',
+            'مصلحة الهايكل الصحية',
+            'الأمانة',
+            'المدير',
+            'خلية الإعلام الآلي'
+        ];
+
+        // ===================== EMPLOYEE STATE =====================
+        let empParsedData = [];
+        let empColumnMap = {};
+        let isEmpUploading = false;
+
+        // ===================== TAB SWITCHING =====================
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+            document.querySelector('.tab[data-tab="' + tab + '"]').classList.add('active');
+            document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.display = 'block';
+        }
 
         // ===================== TOAST =====================
         function showToast(msg, type = 'info') {
@@ -930,13 +1098,18 @@
                 }
             }
             // Partial matching
-            if (lower.includes('مكتب') || lower.includes('قرطاس')) return 'الأدوات المكتبية';
-            if (lower.includes('تجهيز') || lower.includes('وسائل') || lower.includes('معدات'))
-                return 'الوسائل والتجهيزات';
-            if (lower.includes('عتاد') || lower.includes('إداري') || lower.includes('اداري'))
-                return 'العتاد الإداري';
+            if (lower.includes('اثاث') || lower.includes('أثاث') || lower.includes('مكتب'))
+                return 'الأدوات والأثاث';
+            if (lower.includes('اعلام') || lower.includes('إعلام') || lower.includes('آلي') || lower.includes('اليات') || lower.includes('كمبيوتر') || lower.includes('حاسوب'))
+                return 'عتاد ولوازم الإعلام الآلي';
             if (lower.includes('لوزم') || lower.includes('مختلف') || lower.includes('أخرى'))
-                return 'اللوازم المختلفة';
+                return 'اللوازم';
+            if (lower.includes('تكاليف') || lower.includes('ملحقة'))
+                return 'التكاليف الملحقة';
+            if (lower.includes('لبسة') || lower.includes('ملابس') || lower.includes('زي'))
+                return 'الألبسة';
+            if (lower.includes('تنظيف') || lower.includes('نظافة'))
+                return 'مواد التنظيف';
             return input;
         }
 
@@ -1131,6 +1304,432 @@
             isUploading = false;
             btn.disabled = false;
             btn.textContent = '☁️ رفع جميع السلع إلى Firebase';
+        }
+
+        // ===================== EMPLOYEE FILE HANDLING =====================
+        const empFileZone = document.getElementById('empFileZone');
+
+        if (empFileZone) {
+            empFileZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                empFileZone.classList.add('dragover');
+            });
+
+            empFileZone.addEventListener('dragleave', () => {
+                empFileZone.classList.remove('dragover');
+            });
+
+            empFileZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                empFileZone.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length) processEmpFile(files[0]);
+            });
+        }
+
+        function handleEmpFile(event) {
+            const file = event.target.files[0];
+            if (file) processEmpFile(file);
+        }
+
+        function processEmpFile(file) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (!['xlsx', 'xls'].includes(ext)) {
+                showToast('❌ الرجاء اختيار ملف Excel فقط (.xlsx أو .xls)', 'error');
+                return;
+            }
+
+            document.getElementById('empFileName').textContent = file.name;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', codepage: 65001 });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+
+                    if (!json.length) {
+                        showToast('❌ الملف فارغ أو لا يحتوي على بيانات', 'error');
+                        return;
+                    }
+
+                    empParsedData = json;
+                    document.getElementById('empFileRows').textContent = json.length + ' صف';
+                    document.getElementById('empFileInfo').classList.add('visible');
+
+                    detectEmpColumns(json);
+                    renderEmpMapping();
+                    renderEmpPreview();
+
+                    document.getElementById('empPreviewSection').style.display = 'block';
+                    document.getElementById('empStep1').className = 'step done';
+                    document.getElementById('empStep2').className = 'step active';
+                    showToast('✅ تم قراءة ' + json.length + ' سطر من الملف', 'success');
+                } catch (err) {
+                    showToast('❌ فشل في قراءة الملف: ' + err.message, 'error');
+                    console.error(err);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function clearEmpFile() {
+            document.getElementById('empFileInput').value = '';
+            empParsedData = [];
+            empColumnMap = {};
+            document.getElementById('empFileInfo').classList.remove('visible');
+            document.getElementById('empPreviewSection').style.display = 'none';
+            document.getElementById('empColumnMapping').classList.remove('visible');
+            document.getElementById('empPreviewBody').innerHTML = '';
+            document.getElementById('empPreviewHead').innerHTML = '';
+            document.getElementById('empUploadBtn').disabled = true;
+            document.getElementById('empNewCount').textContent = '0';
+            document.getElementById('empSkipCount').textContent = '0';
+            document.getElementById('empTotalCount').textContent = '0';
+        }
+
+        function clearEmpAll() {
+            clearEmpFile();
+            document.getElementById('empStep1').className = 'step active';
+            document.getElementById('empStep2').className = 'step';
+            document.getElementById('empLogArea').classList.remove('visible');
+            document.getElementById('empLogArea').innerHTML = '';
+            document.getElementById('empProgressBar').classList.remove('visible');
+            document.getElementById('empProgressFill').style.width = '0%';
+            document.getElementById('empProgressText').textContent = '';
+        }
+
+        // ===================== EMPLOYEE COLUMN DETECTION & MAPPING =====================
+        function detectEmpColumns(data) {
+            const keys = Object.keys(data[0]);
+            const autoMap = {};
+            const patterns = {
+                name: ['اسم', 'name', 'الاسم', 'موظف', 'employee', 'الموظف', 'عامل', 'الموظفة'],
+                department: ['قسم', 'department', 'القسم', 'مصلحة', 'المصلحة', 'إدارة', 'جهة'],
+            };
+
+            for (const key of keys) {
+                const lower = key.trim().toLowerCase().replace(/[\s\-_]/g, '');
+                for (const [field, aliases] of Object.entries(patterns)) {
+                    if (aliases.some(a => lower.includes(a))) {
+                        if (!autoMap[field]) autoMap[field] = key;
+                    }
+                }
+            }
+
+            const usedKeys = new Set(Object.values(autoMap));
+            const availableKeys = keys.filter(k => !usedKeys.has(k));
+            let availIdx = 0;
+
+            for (const field of EMPLOYEE_FIELDS) {
+                if (!autoMap[field.id]) {
+                    if (availIdx < availableKeys.length) {
+                        autoMap[field.id] = availableKeys[availIdx++];
+                    }
+                }
+            }
+
+            empColumnMap = autoMap;
+        }
+
+        function renderEmpMapping() {
+            const container = document.getElementById('empMappingContainer');
+            container.innerHTML = '';
+            const keys = Object.keys(empParsedData[0]);
+
+            EMPLOYEE_FIELDS.forEach(field => {
+                const div = document.createElement('div');
+                div.className = 'mapping-row';
+
+                const label = document.createElement('span');
+                label.className = 'col-name';
+                label.textContent = field.label + (field.required ? ' *' : '');
+
+                const select = document.createElement('select');
+                select.dataset.field = field.id;
+
+                const noneOpt = document.createElement('option');
+                noneOpt.value = '';
+                noneOpt.textContent = '— تجاهل —';
+                select.appendChild(noneOpt);
+
+                keys.forEach(k => {
+                    const opt = document.createElement('option');
+                    opt.value = k;
+                    opt.textContent = k;
+                    if (empColumnMap[field.id] === k) opt.selected = true;
+                    select.appendChild(opt);
+                });
+
+                select.onchange = function() {
+                    empColumnMap[field.id] = this.value;
+                    renderEmpPreview();
+                    updateEmpUploadReady();
+                    validateEmpMapping();
+                };
+
+                div.appendChild(label);
+                div.appendChild(select);
+                container.appendChild(div);
+            });
+
+            document.getElementById('empColumnMapping').classList.add('visible');
+            validateEmpMapping();
+        }
+
+        function validateEmpMapping() {
+            const missing = EMPLOYEE_FIELDS.filter(f => f.required && !empColumnMap[f.id]);
+            let el = document.getElementById('empMappingStatus');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'empMappingStatus';
+                el.style.cssText = 'font-size:12px; font-weight:bold; margin-top:8px;';
+                document.getElementById('empMappingContainer').after(el);
+            }
+            if (missing.length) {
+                el.innerHTML = '⚠️ الحقول الإجبارية غير مرتبطة: ' + missing.map(f => f.label).join('، ');
+                el.style.color = '#d32f2f';
+            } else {
+                el.innerHTML = '✅ جميع الحقول الإجبارية مرتبطة';
+                el.style.color = '#2e7d32';
+            }
+        }
+
+        // ===================== EMPLOYEE PREVIEW =====================
+        function getEmpFieldValue(row, fieldId) {
+            const key = empColumnMap[fieldId];
+            if (!key) return '';
+            let val = row[key];
+            if (val === undefined || val === null) return '';
+            val = String(val).trim();
+
+            if (fieldId === 'department') {
+                const matched = matchDepartment(val);
+                return matched || val;
+            }
+
+            return val;
+        }
+
+        function matchDepartment(input) {
+            const lower = input.trim().toLowerCase().replace(/[\s\-_]/g, '');
+            for (const dept of DEPARTMENTS) {
+                const deptLower = dept.replace(/[\s\-_]/g, '').toLowerCase();
+                if (lower.includes(deptLower) || deptLower.includes(lower)) {
+                    return dept;
+                }
+            }
+            if (lower.includes('بشر') || lower.includes('موارد')) return 'مصلحة الموارد البشرية';
+            if (lower.includes('جهيز') || lower.includes('تجهيز') || lower.includes('معدات')) return 'مصلحة التجهيز';
+            if (lower.includes('وقاي') || lower.includes('وقاية')) return 'مصلحة الوقاية';
+            if (lower.includes('هايك') || lower.includes('هيكل') || lower.includes('صحي')) return 'مصلحة الهايكل الصحية';
+            if (lower.includes('أمان') || lower.includes('أمانة') || lower.includes('سكرت')) return 'الأمانة';
+            if (lower.includes('مدير') || lower.includes('إدارة')) return 'المدير';
+            if (lower.includes('إعلام') || lower.includes('اعلام') || lower.includes('آلي') || lower.includes('معلوم')) return 'خلية الإعلام الآلي';
+            return input;
+        }
+
+        function renderEmpPreview() {
+            const head = document.getElementById('empPreviewHead');
+            const body = document.getElementById('empPreviewBody');
+
+            const fields = EMPLOYEE_FIELDS.filter(f => empColumnMap[f.id]);
+            const headers = fields.map(f => f.label);
+
+            head.innerHTML = '<tr><th>#</th>' + headers.map(h => '<th>' + h + '</th>').join('') + '</tr>';
+
+            const maxPreview = Math.min(empParsedData.length, 50);
+            let rows = '';
+            for (let i = 0; i < maxPreview; i++) {
+                const row = empParsedData[i];
+                rows += '<tr><td>' + (i + 1) + '</td>';
+                for (const field of fields) {
+                    const val = getEmpFieldValue(row, field.id);
+                    rows += '<td>' + escapeHtml(String(val)) + '</td>';
+                }
+                rows += '</tr>';
+            }
+            body.innerHTML = rows;
+
+            document.getElementById('empPreviewCount').textContent =
+                'عرض ' + maxPreview + ' من ' + empParsedData.length + ' صف';
+            updateEmpSummary();
+            updateEmpUploadReady();
+        }
+
+        function updateEmpSummary() {
+            let valid = 0, invalid = 0;
+            for (const row of empParsedData) {
+                const name = getEmpFieldValue(row, 'name');
+                if (name && name !== '') valid++;
+                else invalid++;
+            }
+            document.getElementById('empTotalCount').textContent = empParsedData.length;
+            document.getElementById('empNewCount').textContent = valid;
+            document.getElementById('empSkipCount').textContent = invalid;
+        }
+
+        function updateEmpUploadReady() {
+            const hasRequired = EMPLOYEE_FIELDS.every(f =>
+                !f.required || empColumnMap[f.id]
+            );
+            const hasData = empParsedData.length > 0;
+            const hasFirebase = db !== null;
+            const btn = document.getElementById('empUploadBtn');
+            btn.disabled = !(hasRequired && hasData && hasFirebase);
+
+            if (!hasFirebase) btn.title = 'الرجاء الاتصال بـ Firebase أولاً';
+            else if (!hasData) btn.title = 'الرجاء رفع ملف Excel';
+            else if (!hasRequired) btn.title = 'الرجاء ربط جميع الحقول الإجبارية';
+            else btn.title = '';
+        }
+
+        // ===================== EMPLOYEE UPLOAD TO FIREBASE =====================
+        function empLog(msg, type = 'info') {
+            const area = document.getElementById('empLogArea');
+            area.classList.add('visible');
+            const line = document.createElement('div');
+            line.className = 'log-line ' + type;
+            line.textContent = '> ' + msg;
+            area.appendChild(line);
+            area.scrollTop = area.scrollHeight;
+        }
+
+        async function uploadEmployeesToFirebase() {
+            if (isEmpUploading) return;
+            if (!db) {
+                showToast('❌ الرجاء الاتصال بـ Firebase أولاً', 'error');
+                return;
+            }
+
+            const requiredMissing = EMPLOYEE_FIELDS.filter(f => f.required && !empColumnMap[f.id]);
+            if (requiredMissing.length) {
+                showToast('❌ الرجاء ربط جميع الحقول الإجبارية', 'error');
+                return;
+            }
+
+            isEmpUploading = true;
+            const btn = document.getElementById('empUploadBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ جاري الرفع...';
+
+            const progressBar = document.getElementById('empProgressBar');
+            progressBar.classList.add('visible');
+            const fill = document.getElementById('empProgressFill');
+            const progressText = document.getElementById('empProgressText');
+            const logArea = document.getElementById('empLogArea');
+            logArea.innerHTML = '';
+            logArea.classList.add('visible');
+
+            // Step 1: Delete ALL existing employees from Firebase
+            empLog('🗑️ جاري حذف جميع الموظفين الموجودين في Firebase...', 'info');
+            let deleteIds = [];
+            try {
+                const snap = await db.collection('employees').get();
+                snap.forEach(doc => deleteIds.push(doc.id));
+                empLog('✅ تم جلب ' + deleteIds.length + ' موظف للحذف', 'success');
+            } catch (err) {
+                empLog('⚠️ فشل جلب الموظفين للحذف: ' + err.message, 'error');
+            }
+
+            // Delete in batches of 50
+            const DELETE_BATCH = 50;
+            for (let i = 0; i < deleteIds.length; i += DELETE_BATCH) {
+                const batch = db.batch();
+                const batchIds = deleteIds.slice(i, Math.min(i + DELETE_BATCH, deleteIds.length));
+                for (const id of batchIds) {
+                    batch.delete(db.collection('employees').doc(id));
+                }
+                try {
+                    await batch.commit();
+                    empLog('✅ تم حذف ' + batchIds.length + ' موظف (' + Math.min(i + DELETE_BATCH, deleteIds.length) + '/' + deleteIds.length + ')', 'success');
+                } catch (err) {
+                    empLog('❌ فشل حذف دفعة: ' + err.message, 'error');
+                }
+            }
+            if (deleteIds.length > 0) empLog('✅ تم حذف ' + deleteIds.length + ' موظف بنجاح', 'success');
+            else empLog('ℹ️ لا يوجد موظفون قديمون للحذف', 'info');
+
+            // Step 2: Prepare new employees from Excel
+            const newEmployees = [];
+            const errors = [];
+
+            for (let i = 0; i < empParsedData.length; i++) {
+                const row = empParsedData[i];
+                const name = String(getEmpFieldValue(row, 'name') || '').trim();
+                const dept = String(getEmpFieldValue(row, 'department') || '').trim();
+
+                if (!name) {
+                    errors.push({ row: i + 1, reason: 'اسم الموظف فارغ' });
+                    continue;
+                }
+
+                const matchedDept = matchDepartment(dept);
+                const finalDept = DEPARTMENTS.includes(matchedDept) ? matchedDept : dept;
+
+                newEmployees.push({
+                    name: name,
+                    department: finalDept,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                });
+            }
+
+            empLog('✅ تم تجهيز ' + newEmployees.length + ' موظف للرفع', 'success');
+            if (errors.length) {
+                empLog('⚠️ تم تخطي ' + errors.length + ' صف بسبب أخطاء:', 'error');
+                errors.slice(0, 10).forEach(e => empLog('   صف ' + e.row + ': ' + e.reason, 'error'));
+                if (errors.length > 10) empLog('   ...و' + (errors.length - 10) + ' خطأ آخر', 'error');
+            }
+
+            if (!newEmployees.length) {
+                showToast('❌ لا يوجد موظفون صالحون للرفع', 'error');
+                isEmpUploading = false;
+                btn.disabled = false;
+                btn.textContent = '☁️ رفع جميع الموظفين إلى Firebase';
+                return;
+            }
+
+            // Step 3: Upload new employees in batches
+            const BATCH_SIZE = 50;
+            let completed = 0;
+            let failed = 0;
+
+            for (let i = 0; i < newEmployees.length; i += BATCH_SIZE) {
+                const batch = db.batch();
+                const batchItems = newEmployees.slice(i, Math.min(i + BATCH_SIZE, newEmployees.length));
+                for (const emp of batchItems) {
+                    const ref = db.collection('employees').doc();
+                    batch.set(ref, emp);
+                }
+                try {
+                    await batch.commit();
+                    completed += batchItems.length;
+                    const progress = Math.round((completed / newEmployees.length) * 100);
+                    fill.style.width = progress + '%';
+                    progressText.textContent = progress + '% — تم رفع ' + completed + ' من ' + newEmployees.length;
+                    empLog('✅ تم رفع ' + batchItems.length + ' موظف (' + completed + '/' + newEmployees.length + ')', 'success');
+                } catch (err) {
+                    failed += batchItems.length;
+                    empLog('❌ فشل في رفع الدفعة: ' + err.message, 'error');
+                }
+            }
+
+            fill.style.width = '100%';
+            progressText.textContent = '✅ اكتمل!';
+
+            empLog('');
+            empLog('═══════════════════════════════════', 'info');
+            empLog('✅ تم حذف ' + (deleteIds ? deleteIds.length : 0) + ' موظف قديم ورفع ' + completed + ' موظف جديد', 'success');
+            if (failed > 0) empLog('❌ فشل ' + failed + ' عملية', 'error');
+            empLog('📁 المجموعة: employees (Firestore)', 'info');
+            empLog('═══════════════════════════════════', 'info');
+
+            showToast('✅ تم تحديث الموظفين: رفع ' + completed + ' موظف إلى Firebase', 'success');
+
+            isEmpUploading = false;
+            btn.disabled = false;
+            btn.textContent = '☁️ رفع جميع الموظفين إلى Firebase';
         }
 
         // ===================== INIT =====================
